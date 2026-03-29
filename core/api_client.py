@@ -3,7 +3,7 @@ import time
 import hashlib
 from functools import lru_cache, wraps
 from typing import List, Dict, Any, Optional
-from zhipuai import ZhipuAI  
+from zhipuai import ZhipuAI  # 新版本导入方式
 from config import ZHIPU_API_KEY, ZHIPU_MODEL
 
 
@@ -36,6 +36,7 @@ def retry_on_failure(max_retries=3, delay=1, backoff=2):
 
 
 class ZhipuAIClient:
+    """智谱AI客户端封装（新版本v2.x+）"""
 
     def __init__(self, api_key: str = None, model: str = None):
         self.api_key = api_key or ZHIPU_API_KEY
@@ -43,6 +44,8 @@ class ZhipuAIClient:
 
         if not self.api_key:
             raise ValueError("请提供智谱AI API Key")
+
+        # 新版本初始化方式
         self.client = ZhipuAI(api_key=self.api_key)
         print(f"✅ 智谱AI客户端(v2.x+)初始化完成，使用模型: {self.model}")
 
@@ -61,6 +64,7 @@ class ZhipuAIClient:
         params = {k: v for k, v in params.items() if v is not None}
 
         try:
+            # 新版本调用方式
             response = self.client.chat.completions.create(**params)
 
             if response.choices and len(response.choices) > 0:
@@ -76,15 +80,19 @@ class ZhipuAIClient:
 
     @lru_cache(maxsize=100)
     def cached_chat_completion(self, message_hash: str, messages_json: str) -> str:
+        """带缓存的聊天补全，避免重复请求"""
         messages = json.loads(messages_json)
         return self.chat_completion(messages)
 
     def generate_message_hash(self, messages: List[Dict[str, str]]) -> str:
+        """生成消息的哈希值，用于缓存"""
         messages_str = json.dumps(messages, sort_keys=True)
         return hashlib.md5(messages_str.encode()).hexdigest()
 
 
 class APIClientFactory:
+    """API客户端工厂，便于未来扩展其他提供商"""
+
     @staticmethod
     def create_client(provider="zhipu", **kwargs):
         """创建API客户端实例"""
