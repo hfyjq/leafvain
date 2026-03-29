@@ -83,8 +83,6 @@ class FileTools:
 
             # 调用大模型API进行总结
             client = self._get_api_client()
-
-            # 构建更有效的提示词（添加系统消息）
             messages = [
                 {
                     "role": "system",
@@ -98,18 +96,15 @@ class FileTools:
 
             print(f"🤔 使用大模型总结内容 ({len(content)} 字符)...")
 
-            # 调用大模型API
             response = client.chat_completion(
                 messages=messages,
                 temperature=0.1,
                 max_tokens=1000
             )
 
-            # 关键修复：正确处理API响应对象
             if hasattr(response, 'choices') and response.choices:
                 summary = response.choices[0].message.content.strip()
             else:
-                # 如果响应结构异常，尝试直接提取内容
                 summary = str(response).strip()
                 if len(summary) > max_length:
                     summary = summary[:max_length] + "..."
@@ -134,11 +129,10 @@ class FileTools:
             recursive: 是否递归列出子目录
         """
         try:
-            # 处理特殊情况：如果路径包含占位符或无效字符，使用根目录
             if not directory_path or directory_path.strip() == "" or "{workspace_path}" in directory_path:
                 target_dir = WORKSPACE_DIR
             else:
-                # 验证路径
+
                 is_valid, path_result = SafetyChecker.validate_path(directory_path, allow_directory=True)
                 if not is_valid:
                     return {
@@ -156,7 +150,6 @@ class FileTools:
                     "files": []
                 }
 
-            # 列出文件
             files = []
             dirs = []
 
@@ -183,12 +176,11 @@ class FileTools:
                     # 忽略无法访问的文件/目录
                     continue
 
-            # 按修改时间排序（最新优先）
             files.sort(key=lambda x: x["modified"], reverse=True)
 
             return {
                 "success": True,
-                "files": files[:50],  # 最多返回50个文件
+                "files": files[:50], 
                 "directories": dirs[:20] if recursive else [],
                 "count": len(files),
                 "directory": str(target_dir.relative_to(WORKSPACE_DIR)),
@@ -206,7 +198,6 @@ class FileTools:
     def read_file(self, file_path: str, max_lines: int = 1000) -> Dict[str, Any]:
         """安全读取文件内容"""
         try:
-            # 验证路径
             is_valid, path_result = SafetyChecker.validate_path(file_path, allow_directory=False)
             if not is_valid:
                 return {
@@ -216,7 +207,6 @@ class FileTools:
 
             abs_path = path_result
 
-            # 检查文件操作
             is_safe, msg = SafetyChecker.check_file_operation(abs_path, "read")
             if not is_safe:
                 return {
@@ -224,7 +214,6 @@ class FileTools:
                     "error": f"文件安全检查失败: {msg}"
                 }
 
-            # 读取文件
             try:
                 with open(abs_path, 'r', encoding='utf-8', errors='ignore') as f:
                     lines = []
@@ -235,7 +224,6 @@ class FileTools:
                         lines.append(line.rstrip('\n'))
                     content = '\n'.join(lines)
             except UnicodeDecodeError:
-                # 尝试其他编码
                 with open(abs_path, 'r', encoding='gbk', errors='ignore') as f:
                     lines = []
                     for i, line in enumerate(f):
@@ -245,12 +233,11 @@ class FileTools:
                         lines.append(line.rstrip('\n'))
                     content = '\n'.join(lines)
 
-            # 获取文件信息
             stat = abs_path.stat()
 
             return {
                 "success": True,
-                "content": content,  # 原始内容
+                "content": content,
                 "file_name": abs_path.name,
                 "file_path": str(abs_path.relative_to(WORKSPACE_DIR)),
                 "file_size": len(content),
