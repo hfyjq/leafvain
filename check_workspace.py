@@ -2,7 +2,6 @@ import os
 import sys
 from pathlib import Path
 
-# 添加当前目录到Python路径
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from config import WORKSPACE_DIR
@@ -27,10 +26,7 @@ def check_workspace():
             elif item.is_dir():
                 print(f"  📁 {item.name}/")
 
-    # 检查当前工作目录
     print(f"\n当前工作目录: {os.getcwd()}")
-
-    # 检查相对路径
     relative_path = Path("./workspace")
     print(f"相对路径 './workspace': {relative_path.resolve()}")
 
