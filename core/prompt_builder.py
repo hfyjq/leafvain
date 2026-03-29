@@ -5,19 +5,13 @@ from core.tool_executor import ToolExecutor
 
 
 class PromptBuilder:
-    """提示词构建器"""
 
     def __init__(self, tool_executor: ToolExecutor = None):
         self.tool_executor = tool_executor or ToolExecutor()
-
-    # 修改 build_system_prompt 方法
-    # 在 build_system_prompt 方法中，增强提示词
     def build_system_prompt(self, user_query: str = None) -> str:
         """构建系统提示词"""
         # 获取工具信息
         tool_info = self.tool_executor.get_tool_info()
-
-        # 构建详细的工具描述
         tools_description = []
         for tool_name, info in tool_info["tools"].items():
             params_desc = []
@@ -33,11 +27,9 @@ class PromptBuilder:
             tools_description.append(f"{tool_name}: {info['description']}")
             if params_desc:
                 tools_description.append("\n".join(params_desc))
-            tools_description.append("")  # 空行
+            tools_description.append("") 
 
         tools_section = "\n".join(tools_description)
-
-        # 简化但明确的系统提示词
         enhanced_system_prompt = f"""你是一个AI助手，可以操作文件。你有以下能力:
 
     {tools_section}
@@ -70,20 +62,16 @@ class PromptBuilder:
         """构建对话消息列表"""
         messages = []
 
-        # 添加系统提示词
         messages.append({
             "role": "system",
             "content": self.build_system_prompt(user_query)
         })
 
-        # 添加历史对话
         if conversation_history:
-            # 过滤掉系统消息（避免重复）
             for msg in conversation_history:
                 if msg.get("role") != "system":
                     messages.append(msg)
 
-        # 添加当前用户查询
         messages.append({
             "role": "user",
             "content": user_query
@@ -97,7 +85,6 @@ class PromptBuilder:
         if not conversation_history:
             conversation_history = []
 
-        # 添加工具执行结果
         conversation_history.append({
             "role": "user",
             "content": f"工具执行结果:\n{tool_result.get('formatted_result', '无结果')}\n\n请根据这个结果继续处理任务。如果任务已完成，请给出最终答案。"
