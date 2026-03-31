@@ -6,6 +6,9 @@ from config import WORKSPACE_DIR, ALLOWED_EXTENSIONS, MAX_FILE_SIZE
 
 
 class SafetyChecker:
+    """安全检查器，确保所有操作在安全范围内"""
+
+    # 危险命令模式
     DANGEROUS_PATTERNS = [
         r"rm\s+-rf",
         r"del\s+/[fqs]",
@@ -17,23 +20,32 @@ class SafetyChecker:
 
     @staticmethod
     def validate_path(user_path: str, allow_directory: bool = True) -> Tuple[bool, Union[Path, str]]:
+        """
+        验证路径是否在安全工作区内
+
+        返回: (是否有效, 解析后的路径或错误信息)
+        """
+        # 如果是空路径，返回工作区根目录
         if not user_path or not isinstance(user_path, str) or user_path.strip() == "":
             return True, WORKSPACE_DIR
 
         clean_path = user_path.strip()
 
+        # 安全检查1: 防止路径遍历攻击
         if ".." in clean_path or clean_path.startswith("/") or "~" in clean_path:
             return False, f"路径包含非法字符: {clean_path}"
 
         try:
             # 解析为绝对路径
             abs_path = (WORKSPACE_DIR / clean_path).resolve()
+
             try:
                 if not abs_path.is_relative_to(WORKSPACE_DIR):
                     return False, f"禁止访问工作区外的路径: {clean_path}"
             except ValueError:
                 return False, f"路径解析失败: {clean_path}"
 
+            # 安全检查3: 路径规范化
             normalized = os.path.normpath(str(abs_path))
             if normalized != str(abs_path):
                 return False, f"路径格式异常: {clean_path}"
@@ -51,8 +63,10 @@ class SafetyChecker:
         操作类型: read, write, delete
         """
         try:
+            # 检查路径是否存在
             if not abs_path.exists():
                 if operation == "write":
+                    # 写入新文件，检查父目录
                     parent = abs_path.parent
                     if not parent.exists():
                         return False, f"父目录不存在: {parent}"
@@ -64,14 +78,17 @@ class SafetyChecker:
                 if abs_path.suffix.lower() not in ALLOWED_EXTENSIONS:
                     return False, f"不支持的文件类型: {abs_path.suffix}"
 
+                # 检查文件大小（仅对已存在文件）
                 if operation in ["read", "write"] and abs_path.exists():
                     file_size = abs_path.stat().st_size
                     if file_size > MAX_FILE_SIZE:
                         return False, f"文件过大: {file_size}字节，最大允许{MAX_FILE_SIZE}字节"
 
+            # 检查是否是符号链接（防止攻击）
             if abs_path.is_symlink():
                 return False, "不支持符号链接"
 
+            # 特殊检查：隐藏文件
             if abs_path.name.startswith('.') and abs_path.name not in ['.gitignore']:
                 return False, "不允许操作隐藏文件"
 
@@ -90,7 +107,6 @@ class SafetyChecker:
             if re.search(pattern, command, re.IGNORECASE):
                 return False, f"检测到危险命令模式: {pattern}"
 
-        # 检查危险关键词
         dangerous_keywords = ["sudo", "su ", "passwd", "dd ", "mkfs", "fdisk"]
         for keyword in dangerous_keywords:
             if keyword in command.lower():
