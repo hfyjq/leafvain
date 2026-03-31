@@ -4,8 +4,10 @@ from tools.file_tools import FileTools
 
 
 class ToolExecutor:
+    """工具执行器，负责调用和管理各种工具"""
+
     def __init__(self):
-        # FileTools实例
+        # 创建FileTools实例
         self.file_tools = FileTools()
 
         self.tools = {
@@ -59,6 +61,23 @@ class ToolExecutor:
                         "default": 500
                     }
                 }
+            },
+            "summarize_large_file": {
+                "function": self.file_tools.summarize_large_file,
+                "description": "智能分块总结大文件内容",
+                "parameters": {
+                    "file_path": {
+                        "type": "string",
+                        "description": "文件路径（相对于工作区根目录）",
+                        "optional": False
+                    },
+                    "max_chunk_size": {
+                        "type": "integer",
+                        "description": "最大分块大小（字符数）",
+                        "optional": True,
+                        "default": 3000
+                    }
+                }
             }
         }
 
@@ -88,10 +107,15 @@ class ToolExecutor:
         tool_func = tool_info["function"]
 
         try:
+            # 验证参数
             validated_args = self._validate_arguments(action, args, tool_info["parameters"])
 
             print(f"🔧 执行 {action}，参数: {validated_args}")
+
+            # 执行工具
             result = tool_func(**validated_args)
+
+            # 检查工具执行结果
             if not result.get("success", False):
                 print(f"❌ 工具执行失败: {result.get('error', '未知错误')}")
 
@@ -99,7 +123,7 @@ class ToolExecutor:
             formatted_result = self._format_result(action, result)
 
             return {
-                "success": result.get("success", False),  
+                "success": result.get("success", False),  # 使用工具的实际成功状态
                 "action": action,
                 "args": validated_args,
                 "raw_result": result,
@@ -131,11 +155,13 @@ class ToolExecutor:
                 value = value.replace('"', '\\"')
                 args[key] = value
 
+        # 特殊处理：允许text参数映射到content
         if action == "summarize_content" and "text" in args:
             args["content"] = args.pop("text")
 
         for param_name, param_info in parameters.items():
             if param_name in args:
+                # 类型检查（简化版）
                 value = args[param_name]
                 expected_type = param_info["type"]
 
@@ -149,6 +175,7 @@ class ToolExecutor:
                     except:
                         raise ValueError(f"参数 '{param_name}' 应为整数类型")
                 elif expected_type == "boolean" and not isinstance(value, bool):
+                    # 尝试转换
                     if isinstance(value, str):
                         value = value.lower() in ["true", "yes", "1"]
                     else:
@@ -158,6 +185,7 @@ class ToolExecutor:
             elif not param_info.get("optional", False):
                 raise ValueError(f"缺少必需参数: {param_name}")
             else:
+                # 使用默认值
                 if "default" in param_info:
                     validated[param_name] = param_info["default"]
 
@@ -190,6 +218,7 @@ class ToolExecutor:
             file_info += f"路径: {result.get('file_path', '')}\n"
             file_info += f"大小: {result.get('file_size', 0)} 字符\n"
 
+            # 返回包含原始内容的格式
             return f"""{file_info}
     文件内容:
     {content}"""
