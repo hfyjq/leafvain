@@ -231,7 +231,6 @@ class FileTools:
                             "type": "directory"
                         })
                 except (PermissionError, OSError) as e:
-                    # 忽略无法访问的文件/目录
                     continue
 
             # 按修改时间排序（最新优先）
@@ -268,8 +267,6 @@ class FileTools:
             abs_path = path_result
             file_size = abs_path.stat().st_size
             is_large_file = file_size > config.MAX_CONTENT_LENGTH  # 10KB阈值
-
-            # 检查文件操作
             is_safe, msg = SafetyChecker.check_file_operation(abs_path, "read")
             if not is_safe:
                 return {
@@ -283,7 +280,6 @@ class FileTools:
             elif ext in ['.doc', '.docx']:
                 return self._read_docx(abs_path, max_lines, is_large_file)
             else:
-                # 文本文件处理
                 return self._read_text_file(abs_path, max_lines, is_large_file)
 
         except Exception as e:
@@ -359,13 +355,11 @@ class FileTools:
                         if re.search(r"references|参考文献", text, re.IGNORECASE):
                             key_pages.append(i)
 
-                    # 确保至少包含首尾页
                     if 0 not in key_pages:
                         key_pages.insert(0, 0)
                     if total_pages - 1 not in key_pages:
                         key_pages.append(total_pages - 1)
                 else:
-                    # 通用策略（原有逻辑）
                     key_pages = self._select_key_pages(total_pages, min(total_pages, 10))
 
                 # 读取关键页
@@ -392,11 +386,9 @@ class FileTools:
         if total_pages <= max_pages:
             return list(range(total_pages))
 
-        # 优先选择：开头3页 + 结尾3页 + 中间均匀采样
         key_pages = [0, 1, 2]  # 开头
         key_pages.extend([total_pages - 3, total_pages - 2, total_pages - 1])  # 结尾
 
-        # 中间均匀采样
         step = max(1, (total_pages - 6) // (max_pages - 6))
         for i in range(3, total_pages - 3, step):
             if len(key_pages) >= max_pages:
@@ -454,7 +446,6 @@ class FileTools:
 
     @staticmethod
     def _human_readable_size(size_bytes: int) -> str:
-        """将字节数转换为人类可读的格式"""
         for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
             if size_bytes < 1024.0:
                 return f"{size_bytes:.1f}{unit}"
