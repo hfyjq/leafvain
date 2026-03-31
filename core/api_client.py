@@ -3,7 +3,7 @@ import time
 import hashlib
 from functools import lru_cache, wraps
 from typing import List, Dict, Any, Optional
-from zhipuai import ZhipuAI  # 新版本导入方式
+from zhipuai import ZhipuAI 
 from config import ZHIPU_API_KEY, ZHIPU_MODEL
 
 
@@ -91,7 +91,6 @@ class ZhipuAIClient:
 
 
 class APIClientFactory:
-    """API客户端工厂，便于未来扩展其他提供商"""
 
     @staticmethod
     def create_client(provider="zhipu", **kwargs):
