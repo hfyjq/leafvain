@@ -5,7 +5,6 @@ import re
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 
-# 添加当前目录到Python路径
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from config import WORKSPACE_DIR, ZHIPU_API_KEY, MAX_EXECUTION_STEPS
@@ -14,7 +13,6 @@ from core.prompt_builder import PromptBuilder
 from core.tool_executor import ToolExecutor
 
 
-# 在 robust_parse_model_response 函数中添加预处理
 def robust_parse_model_response(response: str) -> Dict[str, Any]:
     """健壮的模型响应解析，处理各种JSON格式问题"""
     if not response or not isinstance(response, str):
@@ -26,7 +24,6 @@ def robust_parse_model_response(response: str) -> Dict[str, Any]:
     response = response.strip()
     print(f"🔍 原始响应 (前500字符): {response[:500]}{'...' if len(response) > 500 else ''}")
 
-    # 预处理：转义所有控制字符
     sanitized = re.sub(
         r'[\x00-\x1F\x7F-\x9F]',
         lambda m: f'\\u{ord(m.group(0)):04x}',
@@ -77,24 +74,19 @@ def robust_parse_model_response(response: str) -> Dict[str, Any]:
     try:
         result = {}
 
-        # 提取thought
         thought_match = re.search(r'"thought"\s*:\s*"([^"]*)"', response, re.DOTALL)
         if thought_match:
             result["thought"] = thought_match.group(1)
 
-        # 提取action
         action_match = re.search(r'"action"\s*:\s*"([^"]*)"', response)
         if action_match:
             result["action"] = action_match.group(1)
 
-        # 提取final_answer
         answer_match = re.search(r'"final_answer"\s*:\s*"([^"]*)"', response, re.DOTALL)
         if answer_match:
             result["final_answer"] = answer_match.group(1)
 
-        # 提取args
         if "action" in result:
-            # 查找args部分
             args_start = response.find('"args"')
             if args_start != -1:
                 # 从args开始找到匹配的}
@@ -303,8 +295,6 @@ def main():
                     result = tool_executor.execute("list_files", {})
                     print(f"\n{result.get('formatted_result', '无结果')}")
                     continue
-
-                # 处理用户查询
                 process_query_safely(user_input, api_client, tool_executor, prompt_builder)
 
             except KeyboardInterrupt:
