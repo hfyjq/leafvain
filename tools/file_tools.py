@@ -1,20 +1,67 @@
+import os
+import json
 from pathlib import Path
+from config import WORKSPACE_DIR, ALLOWED_EXTENSIONS, MAX_FILE_SIZE
 import re
 from typing import List, Dict, Any, Optional
 from datetime import datetime
-
+from core.tool_interface import ToolInterface
 import config
 from core.safety_checker import SafetyChecker
 from core.api_client import APIClientFactory
 from config import WORKSPACE_DIR
+import sys
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+# 在 file_tools.py 顶部添加
+import os
+import sys
+from pathlib import Path
+
+# 确保正确导入config
+try:
+    from config import WORKSPACE_DIR, ALLOWED_EXTENSIONS
+except ImportError:
+    # 备用方案：手动计算路径
+    BASE_DIR = Path(__file__).resolve().parent.parent
+    WORKSPACE_DIR = BASE_DIR / "workspace"
+    ALLOWED_EXTENSIONS = {'.txt', '.md', '.py', '.json', '.csv', '.doc', '.docx', '.pdf'}
+    print(f"⚠️ 备用配置: WORKSPACE_DIR={WORKSPACE_DIR}")
 
 
-class FileTools:
+class FileTools(ToolInterface):
     """文件操作工具集"""
+
+
 
     def __init__(self):
         # 初始化API客户端
+        super().__init__()
+        self.metadata = {
+            "name": "file_tools",
+            "description": "文件操作工具集",
+            "parameters": {
+                "list_files": {
+                    "directory_path": {"type": "string", "optional": True},
+                    "recursive": {"type": "boolean", "optional": True, "default": False}
+                },
+                "read_file": {
+                    "file_path": {"type": "string"},
+                    "max_lines": {"type": "integer", "optional": True, "default": 1000}
+                },
+                "summarize_content": {
+                    "content": {"type": "string"},
+                    "max_length": {"type": "integer", "optional": True, "default": 500}
+                }
+            }
+        }
         self.api_client = None
+
+    def execute(self, **kwargs) -> Dict[str, Any]:
+        action = kwargs.pop("action", None)
+        if action == "list_files":
+            return self.list_files(**kwargs)
+        elif action == "read_file":
+            return self.read_file(**kwargs)
 
     def _get_api_client(self):
         """获取API客户端（懒加载）"""
@@ -29,6 +76,8 @@ class FileTools:
                 "success": False,
                 "error": "内容为空"
             }
+
+
 
         # 简单摘要算法：取前几行和非空行
         lines = [line.strip() for line in content.split('\n') if line.strip()]
@@ -176,20 +225,41 @@ class FileTools:
             print(f"⚠️ 大模型总结失败: {str(e)}")
             return self._simple_summary(content, max_length)
 
-    def list_files(self, directory_path: str = "", recursive: bool = False) -> Dict[str, Any]:
-        """
-        列出工作区内的文件
 
-        参数:
-            directory_path: 目录路径（相对于工作区根目录），默认为空表示根目录
-            recursive: 是否递归列出子目录
-        """
+
+    @staticmethod
+    def normalize_extension(self, ext: str) -> str:
+        """简化扩展名规范化"""
+        if not ext:
+            return ""
+
+        # 转换为小写并去除空格
+        ext = ext.strip().lower()
+
+        # 确保以点开头
+        if not ext.startswith('.'):
+            ext = '.' + ext
+
+        return ext
+
+    def _human_readable_size(self, size_bytes: int) -> str:
+        """转换字节数为易读格式"""
+        if size_bytes == 0:
+            return "0B"
+        units = ("B", "KB", "MB", "GB")
+        i = 0
+        while size_bytes >= 1024 and i < len(units) - 1:
+            size_bytes /= 1024
+            i += 1
+        return f"{size_bytes:.2f}{units[i]}"
+
+    def list_files(self, directory_path: str = "", recursive: bool = False) -> Dict[str, Any]:
         try:
-            # 处理特殊情况：如果路径包含占位符或无效字符，使用根目录
+            # 处理特殊情况
             if not directory_path or directory_path.strip() == "" or "{workspace_path}" in directory_path:
                 target_dir = WORKSPACE_DIR
             else:
-                # 验证路径
+                # 使用旧版路径验证
                 is_valid, path_result = SafetyChecker.validate_path(directory_path, allow_directory=True)
                 if not is_valid:
                     return {
@@ -197,17 +267,19 @@ class FileTools:
                         "error": f"路径验证失败: {path_result}",
                         "files": []
                     }
-
                 target_dir = path_result
 
-            if not target_dir.is_dir():
+            print(f"✅ 最终目标目录: {target_dir}")
+
+            # 检查目录是否存在
+            if not target_dir.exists() or not target_dir.is_dir():
                 return {
                     "success": False,
-                    "error": f"不是目录: {target_dir}",
+                    "error": f"不是有效目录: {target_dir}",
                     "files": []
                 }
 
-            # 列出文件
+            # 列出文件（恢复旧版逻辑）
             files = []
             dirs = []
 
@@ -222,7 +294,7 @@ class FileTools:
                             "size_human": self._human_readable_size(stat.st_size),
                             "modified": stat.st_mtime,
                             "modified_date": datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M:%S"),
-                            "extension": item.suffix.lower()
+                            "extension": item.suffix.lower()  # 恢复旧版扩展名处理
                         })
                     elif item.is_dir() and recursive:
                         dirs.append({
@@ -231,21 +303,37 @@ class FileTools:
                             "type": "directory"
                         })
                 except (PermissionError, OSError) as e:
+                    print(f"⚠️ 忽略无法访问的文件/目录: {item.name}")
                     continue
 
             # 按修改时间排序（最新优先）
             files.sort(key=lambda x: x["modified"], reverse=True)
 
+            # 构建返回结果
+            total_size = sum(f["size"] for f in files)
+            total_size_human = self._human_readable_size(total_size)
+
+            safe_target_dir = str(target_dir).replace('{', '{{').replace('}', '}}')
+
+            # 构建安全格式化字符串
+            formatted_result = """📂 目录: {}
+            文件总数: {} 个
+            总大小: {}""".format(
+                safe_target_dir,
+                len(files),
+                total_size_human
+            )
+
             return {
                 "success": True,
-                "files": files[:50],  # 最多返回50个文件
+                "files": files[:50],
                 "directories": dirs[:20] if recursive else [],
                 "count": len(files),
                 "directory": str(target_dir.relative_to(WORKSPACE_DIR)),
-                "total_size": sum(f["size"] for f in files),
-                "total_size_human": self._human_readable_size(sum(f["size"] for f in files))
+                "total_size": total_size,
+                "total_size_human": total_size_human,
+                "formatted_result": formatted_result  # 修复后的格式化结果
             }
-
         except Exception as e:
             return {
                 "success": False,
@@ -267,6 +355,8 @@ class FileTools:
             abs_path = path_result
             file_size = abs_path.stat().st_size
             is_large_file = file_size > config.MAX_CONTENT_LENGTH  # 10KB阈值
+
+            # 检查文件操作
             is_safe, msg = SafetyChecker.check_file_operation(abs_path, "read")
             if not is_safe:
                 return {
@@ -280,6 +370,7 @@ class FileTools:
             elif ext in ['.doc', '.docx']:
                 return self._read_docx(abs_path, max_lines, is_large_file)
             else:
+                # 文本文件处理
                 return self._read_text_file(abs_path, max_lines, is_large_file)
 
         except Exception as e:
@@ -355,11 +446,13 @@ class FileTools:
                         if re.search(r"references|参考文献", text, re.IGNORECASE):
                             key_pages.append(i)
 
+                    # 确保至少包含首尾页
                     if 0 not in key_pages:
                         key_pages.insert(0, 0)
                     if total_pages - 1 not in key_pages:
                         key_pages.append(total_pages - 1)
                 else:
+                    # 通用策略（原有逻辑）
                     key_pages = self._select_key_pages(total_pages, min(total_pages, 10))
 
                 # 读取关键页
@@ -386,9 +479,11 @@ class FileTools:
         if total_pages <= max_pages:
             return list(range(total_pages))
 
+        # 优先选择：开头3页 + 结尾3页 + 中间均匀采样
         key_pages = [0, 1, 2]  # 开头
         key_pages.extend([total_pages - 3, total_pages - 2, total_pages - 1])  # 结尾
 
+        # 中间均匀采样
         step = max(1, (total_pages - 6) // (max_pages - 6))
         for i in range(3, total_pages - 3, step):
             if len(key_pages) >= max_pages:
@@ -446,6 +541,7 @@ class FileTools:
 
     @staticmethod
     def _human_readable_size(size_bytes: int) -> str:
+        """将字节数转换为人类可读的格式"""
         for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
             if size_bytes < 1024.0:
                 return f"{size_bytes:.1f}{unit}"
