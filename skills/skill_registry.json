@@ -1,0 +1,412 @@
+{
+  "file_enhanced": {
+    "skill_id": "file_enhanced",
+    "name": "文件操作（增强版）",
+    "version": "3.0.0",
+    "description": "这是一个增强的文件操作技能，支持列出文件、读取文件、总结内容，还能自动处理多步骤任务如总结所有文件。",
+    "author": "系统",
+    "category": [
+      "文件",
+      "工作区",
+      "管理",
+      "智能"
+    ],
+    "tags": [
+      "文件",
+      "文档",
+      "读取",
+      "总结",
+      "智能",
+      "多步骤",
+      "上下文"
+    ],
+    "icon": "🧠📁",
+    "functions": [
+      {
+        "name": "intelligent_file_task",
+        "description": "\n智能文件任务\n\n根据用户查询自动分配合适的功能\n\nArgs:\n    user_query: 用户查询\n    context: 上下文信息（可选）\n\nReturns:\n    任务执行结果\n",
+        "parameters": {
+          "user_query": {
+            "type": "<class 'str'>",
+            "description": "",
+            "optional": false
+          },
+          "context": {
+            "type": "typing.Optional[typing.Dict]",
+            "description": "",
+            "optional": true,
+            "default": null
+          }
+        },
+        "user_intent_examples": []
+      },
+      {
+        "name": "list_files",
+        "description": "\n列出工作区内的文件\n\nArgs:\n    directory_path: 目录路径，默认为工作区根目录\n    recursive: 是否递归遍历子目录\n    exclude_extensions: 排除的文件扩展名列表\n\nReturns:\n    包含文件列表的字典\n",
+        "parameters": {
+          "directory_path": {
+            "type": "<class 'str'>",
+            "description": "",
+            "optional": true,
+            "default": "."
+          },
+          "recursive": {
+            "type": "<class 'bool'>",
+            "description": "",
+            "optional": true,
+            "default": false
+          },
+          "exclude_extensions": {
+            "type": "typing.Optional[typing.List[str]]",
+            "description": "",
+            "optional": true,
+            "default": null
+          }
+        },
+        "user_intent_examples": [
+          {
+            "user": "列出所有文件",
+            "intent": "用户想要查看工作区中的所有文件"
+          },
+          {
+            "user": "显示当前目录",
+            "intent": "用户想要查看当前目录的文件列表"
+          },
+          {
+            "user": "工作区有哪些文件",
+            "intent": "用户想要查看工作区的文件"
+          }
+        ]
+      },
+      {
+        "name": "read_file",
+        "description": "\n读取文件内容\n\nArgs:\n    file_path: 文件路径\n    max_lines: 最大读取行数\n\nReturns:\n    包含文件内容的字典\n",
+        "parameters": {
+          "file_path": {
+            "type": "<class 'str'>",
+            "description": "",
+            "optional": false
+          },
+          "max_lines": {
+            "type": "<class 'int'>",
+            "description": "",
+            "optional": true,
+            "default": 1000
+          }
+        },
+        "user_intent_examples": [
+          {
+            "user": "读取report.md",
+            "intent": "用户想要读取指定文件的内容"
+          },
+          {
+            "user": "打开这个文件",
+            "intent": "用户想要查看文件内容"
+          }
+        ]
+      },
+      {
+        "name": "summarize_all_files",
+        "description": "\n总结工作区所有文件\n\n这是一个复合功能，自动执行多步骤任务：\n1. 列出文件\n2. 读取每个文件\n3. 总结内容\n4. 返回综合报告\n\nArgs:\n    directory_path: 目录路径\n    max_files: 最大处理文件数\n    max_length_per_summary: 每个总结的最大长度\n\nReturns:\n    包含综合总结的字典\n",
+        "parameters": {
+          "directory_path": {
+            "type": "<class 'str'>",
+            "description": "",
+            "optional": true,
+            "default": "."
+          },
+          "max_files": {
+            "type": "<class 'int'>",
+            "description": "",
+            "optional": true,
+            "default": 5
+          },
+          "max_length_per_summary": {
+            "type": "<class 'int'>",
+            "description": "",
+            "optional": true,
+            "default": 500
+          }
+        },
+        "user_intent_examples": []
+      },
+      {
+        "name": "summarize_content",
+        "description": "\n总结文本内容\n\nArgs:\n    content: 要总结的文本内容\n    max_length: 总结的最大长度\n\nReturns:\n    包含总结结果的字典\n",
+        "parameters": {
+          "content": {
+            "type": "<class 'str'>",
+            "description": "",
+            "optional": false
+          },
+          "max_length": {
+            "type": "<class 'int'>",
+            "description": "",
+            "optional": true,
+            "default": 2000
+          }
+        },
+        "user_intent_examples": []
+      }
+    ],
+    "examples": [
+      {
+        "user": "列出工作区所有文件",
+        "assistant": "我将为您列出工作区中的所有文件...",
+        "function": "list_files"
+      },
+      {
+        "user": "读取report.md文件",
+        "assistant": "我将读取report.md文件的内容...",
+        "function": "read_file"
+      },
+      {
+        "user": "总结这个文件",
+        "assistant": "我来总结这个文件的内容...",
+        "function": "summarize_content"
+      },
+      {
+        "user": "总结工作区所有文件",
+        "assistant": "🧠 我将智能地总结工作区中的所有文件，这需要几个步骤...",
+        "function": "summarize_all_files"
+      }
+    ],
+    "requirements": [
+      "pathlib",
+      "PyPDF2",
+      "python-docx"
+    ],
+    "safety_rules": [
+      "只能访问工作区内的文件",
+      "禁止访问系统文件",
+      "大文件自动截断，避免内存溢出",
+      "不处理敏感个人信息"
+    ],
+    "ux_config": {
+      "auto_finalize": true,
+      "friendly_format": true,
+      "max_result_length": 2000,
+      "show_usage_hints": true
+    }
+  },
+  "schedule": {
+    "skill_id": "schedule",
+    "name": "日程管理",
+    "version": "2.0.0",
+    "description": "这是一个管理日程的skill，你可以添加、查看、删除日程安排。",
+    "author": "系统",
+    "category": [
+      "日程",
+      "时间",
+      "管理"
+    ],
+    "tags": [
+      "日程",
+      "日历",
+      "提醒",
+      "安排",
+      "事件",
+      "时间",
+      "会议",
+      "计划"
+    ],
+    "icon": "📅",
+    "functions": [
+      {
+        "name": "add_schedule",
+        "description": "\n添加日程\n\nArgs:\n    event: 事件名称\n    event_time: 事件时间（自然语言或ISO格式）\n    remind_before: 提前提醒时间（分钟），默认0表示不提醒\n\nReturns:\n    添加结果\n",
+        "parameters": {
+          "event": {
+            "type": "<class 'str'>",
+            "description": "",
+            "optional": false
+          },
+          "event_time": {
+            "type": "<class 'str'>",
+            "description": "",
+            "optional": false
+          },
+          "remind_before": {
+            "type": "<class 'int'>",
+            "description": "",
+            "optional": true,
+            "default": 0
+          }
+        },
+        "user_intent_examples": [
+          {
+            "user": "添加明天10点的会议",
+            "intent": "用户想要添加一个新的日程"
+          },
+          {
+            "user": "提醒我下午开会",
+            "intent": "用户想要设置一个提醒"
+          }
+        ]
+      },
+      {
+        "name": "list_schedules",
+        "description": "\n列出日程\n\nArgs:\n    future_only: 是否只显示未来日程\n\nReturns:\n    日程列表\n",
+        "parameters": {
+          "future_only": {
+            "type": "<class 'bool'>",
+            "description": "",
+            "optional": true,
+            "default": true
+          }
+        },
+        "user_intent_examples": [
+          {
+            "user": "查看日程",
+            "intent": "用户想要查看所有的日程安排"
+          },
+          {
+            "user": "今天有什么安排",
+            "intent": "用户想要查看今天的日程"
+          }
+        ]
+      },
+      {
+        "name": "remove_schedule",
+        "description": "\n通过索引删除日程\n\nArgs:\n    index: 日程索引\n\nReturns:\n    删除结果\n",
+        "parameters": {
+          "index": {
+            "type": "<class 'int'>",
+            "description": "",
+            "optional": false
+          }
+        },
+        "user_intent_examples": []
+      },
+      {
+        "name": "remove_schedule_by_description",
+        "description": "\n通过描述删除日程\n\nArgs:\n    description: 日程描述\n\nReturns:\n    删除结果\n",
+        "parameters": {
+          "description": {
+            "type": "<class 'str'>",
+            "description": "",
+            "optional": false
+          }
+        },
+        "user_intent_examples": []
+      }
+    ],
+    "examples": [
+      {
+        "user": "添加一个明天上午9点的会议",
+        "assistant": "我将为您添加明天上午9点的会议日程...",
+        "function": "add_schedule"
+      },
+      {
+        "user": "查看我今天的安排",
+        "assistant": "我来查看您今天的日程安排...",
+        "function": "list_schedules"
+      },
+      {
+        "user": "删除今晚的聚餐",
+        "assistant": "我将查找并删除今晚的聚餐安排...",
+        "function": "remove_schedule_by_description"
+      },
+      {
+        "user": "列出所有日程",
+        "assistant": "我来列出您的所有日程安排...",
+        "function": "list_schedules"
+      }
+    ],
+    "requirements": [],
+    "safety_rules": [
+      "只能管理当前用户的日程",
+      "时间必须是未来时间",
+      "敏感操作需要确认",
+      "不处理敏感个人信息"
+    ],
+    "ux_config": {
+      "auto_finalize": true,
+      "friendly_format": true,
+      "max_result_length": 1000,
+      "show_usage_hints": true
+    }
+  },
+  "template": {
+    "skill_id": "template",
+    "name": "技能模板",
+    "version": "1.0.0",
+    "description": "这是一个技能模板，描述了技能的功能和用途。",
+    "author": "开发者名称",
+    "category": [
+      "工具",
+      "示例"
+    ],
+    "tags": [
+      "模板",
+      "示例"
+    ],
+    "icon": "🛠️",
+    "functions": [
+      {
+        "name": "another_function",
+        "description": "\n另一个功能示例\n\nArgs:\n    query: 查询字符串\n\nReturns:\n    查询结果\n",
+        "parameters": {
+          "query": {
+            "type": "<class 'str'>",
+            "description": "",
+            "optional": false
+          }
+        },
+        "user_intent_examples": []
+      },
+      {
+        "name": "example_function",
+        "description": "\n示例功能\n\n这是功能方法的示例，请按照此格式编写功能方法。\n\nArgs:\n    param1: 参数1的描述\n    param2: 参数2的描述，默认值10\n\nReturns:\n    包含执行结果的字典，必须包含\"success\"字段\n\nExamples:\n    >>> skill.func_example_function(\"test\", 5)\n    {\"success\": True, \"data\": \"处理完成: test 次数: 5\"}\n",
+        "parameters": {
+          "param1": {
+            "type": "<class 'str'>",
+            "description": "",
+            "optional": false
+          },
+          "param2": {
+            "type": "<class 'int'>",
+            "description": "",
+            "optional": true,
+            "default": 10
+          }
+        },
+        "user_intent_examples": []
+      }
+    ],
+    "examples": [
+      {
+        "user": "示例查询1",
+        "assistant": "示例回答1，说明技能如何被调用",
+        "function": "example_function",
+        "args": {
+          "param1": "值1",
+          "param2": 5
+        }
+      },
+      {
+        "user": "示例查询2",
+        "assistant": "示例回答2，展示技能的不同功能",
+        "function": "another_function",
+        "args": {
+          "query": "测试查询"
+        }
+      }
+    ],
+    "requirements": [
+      "requests",
+      "pillow"
+    ],
+    "safety_rules": [
+      "仅用于合法用途",
+      "不要处理敏感个人信息",
+      "遵守相关法律法规"
+    ],
+    "ux_config": {
+      "auto_finalize": true,
+      "friendly_format": true,
+      "max_result_length": 1000,
+      "show_usage_hints": true
+    }
+  }
+}
